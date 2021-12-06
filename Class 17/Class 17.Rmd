@@ -1,0 +1,101 @@
+---
+title: "Class_17.Rmd"
+author: "Kaito Tanaka"
+date: "11/29/2021"
+output: pdf_document
+---
+
+## Getting Started
+
+```{r}
+vax <- read.csv("covid19vaccinesbyzipcode_test.csv")
+head(vax)
+head(vax$as_of_date)
+tail(vax$as_of_date)
+```
+
+> Q1. What column details the total number of people fully vaccinated?
+
+The column "persons_fully_vaccinated" details the total number of people fully vaccinated. 
+
+> Q2. What column details the Zip code tabulation area?
+
+The column "zip_code_tabulation_area" details the zip code tabulation area. 
+
+> Q3. What is the earliest date in this dataset?
+
+The earliest date is 2021-01-05. 
+
+> Q4. What is the latest date in this dataset?
+
+The latest date is 2021-11-23.
+
+Get a quick overview of the dataset
+```{r}
+#skimr::skim(vax)
+```
+
+> Q5. How many numeric columns are in this dataset?
+
+```{r}
+ncol(vax)
+```
+9 numeric columns. 
+
+> Q6. Note that there are “missing values” in the dataset. How many NA values there in the persons_fully_vaccinated column?
+
+```{r}
+sum(is.na(vax$persons_fully_vaccinated))
+```
+8256 NA values are present in "persons_fully_vaccinated".
+
+> Q7. What percent of persons_fully_vaccinated values are missing (to 2 significant figures)? 
+
+```{r}
+(sum( is.na(vax$persons_fully_vaccinated) ) /
+NROW(vax$persons_fully_vaccinated)) *100
+```
+10.17% of the data is missing here
+
+##Working with Dates
+
+We will use the **lubridate** package to make life a lot easier when dealing with dates and times: 
+
+```{r}
+#install.packages("lubridate")
+library(lubridate)
+```
+
+what is today's date?
+```{r}
+today()
+```
+
+```{r}
+#Specify our format
+vax$as_of_date <- ymd(vax$as_of_date)
+```
+
+```{r}
+#Example of what we can now do easily
+today() - vax$as_of_date[1]
+```
+
+> Q9. How many days have passed since the last update of the dataset?
+
+```{r}
+vax$as_of_date[nrow(vax)] - vax$as_of_date[1]
+```
+7 days have passed since the last update of the dataset.
+
+> Q10. How many unique dates are in the dataset (i.e. how many different dates are detailed)?
+
+```{r}
+length(unique(vax$as_of_date))
+```
+There are 47 unique dates in the dataset.
+
+```{r}
+#install.packages("zipcodeR")
+#library(zipcodeR)
+```

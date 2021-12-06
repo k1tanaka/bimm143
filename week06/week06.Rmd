@@ -1,0 +1,194 @@
+---
+title: "Machine Learning 1"
+author: "Kaito Tanaka"
+date: "10/21/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Principal Component Analysis (PCA)
+
+## PCA of UK food data
+Read data from website and try a few visualizations
+
+```{r}
+url <- "https://tinyurl.com/UK-foods"
+x <- read.csv(url, row.names=1)
+x
+```
+>Q1. How many rows and columns are in your new data frame named x? What R functions could you use to answer this questions?
+
+Use dim(x) to find the number of rows and colums in the new data
+```{r}
+dim(x)
+```
+
+>Q2. Which approach to solving the ‘row-names problem’ mentioned above do you prefer and why? Is one approach more robust than another under certain circumstances?
+
+I prefer using the first column as the argument of the table. Using "x <- x[,-1]" multiple times can cause you to lose arguments that you shouldn't be using. 
+
+```{r}
+cols<-rainbow(nrow(x))
+barplot(as.matrix(x), col=cols)
+```
+
+```{r}
+barplot(as.matrix(x), beside=TRUE, col=cols)
+```
+>Q3: Changing what optional argument in the above barplot() function results in the following plot?
+
+Changing the argument of "beside". Setting it to beside=TRUE will result in the change to the plot.
+
+Convert the data into a pairwise plot
+```{r}
+pairs(x, col=rainbow(10), pch=16)
+```
+>Q5: Generating all pairwise plots may help somewhat. Can you make sense of the following code and resulting figure? What does it mean if a given point lies on the diagonal for a given plot?
+
+If a given point lies on the diagonal for a given plot, that means that (in our case) the consumption for that country follows the trend between countries. The closer a point lies on the diagonal, the similar the amount of the variables they have for the x and y parts. 
+
+
+> Q6. What is the main differences between N. Ireland and the other countries of the UK in terms of this data-set? 
+
+The main difference between N. Ireland and the other countries is that N. Ireland has a much more varied diet compared to the countries, as evident through the larger spread of points. N. Ireland has much less consumption of fresh fruit, as well as more consumption of alcoholic drinks than the other countries, as evident in the blue and orange dots that are distant from the diagonal. 
+
+
+PCA to the rescue
+The main base R PCA function is called 'prcomp()' and we will need to give it the transpose of our input data
+
+```{r}
+pca<-prcomp(t(x))
+```
+
+```{r}
+attributes(pca)
+```
+
+To make our new PCA plot (aka. PCA score plot) we access "pca$x''
+
+```{r}
+pca$x
+```
+
+Now plot it, such that each point represents a country in our dataset and add labels as well
+```{r}
+plot(pca$x[,1],pca$x[,2])
+text(pca$x[,1],pca$x[,2], colnames(x))
+```
+
+> Q7 and Q8: Now color up the plot and add text of PC1 vs PC2
+
+```{r}
+country_cols<- c("orange","red","blue","green")
+plot(pca$x[,1],pca$x[,2], xlab="PC1", ylab="PC2")
+text(pca$x[,1],pca$x[,2], colnames(x), col=country_cols)
+```
+
+Use the square of pca$sdev (standard deviation) to calculate how much variation in the original data each PC accounts for, then summarize in a barplot
+```{r}
+v <- round( pca$sdev^2/sum(pca$sdev^2) * 100 )
+v
+barplot(v, xlab="Principal Component", ylab="Percent Variation")
+```
+>Q9: Generate a similar ‘loadings plot’ for PC2. What two food groups feature prominantely and what does PC2 maninly tell us about?
+
+Fresh potatoes and soft drinks are featured prominently. PC2 tells us that they eat more fresh potatoes, but consume less soft drinks, and that those variables greatly vary in N. Ireland compared to other UK countries. 
+
+```{r}
+par(mar=c(10, 3, 0.35, 0))
+barplot( pca$rotation[,2], las=2 )
+```
+
+```{r}
+biplot(pca)
+```
+
+
+##PCA of RNA-Seq data
+
+Read in data from website
+
+```{r}
+url2 <- "https://tinyurl.com/expression-CSV"
+rna.data <- read.csv(url2, row.names=1)
+head(rna.data)
+```
+>Q10: How many genes and samples are in this data set?
+
+```{r}
+dim(rna.data)
+```
+
+
+```{r}
+pca<-prcomp(t(rna.data))
+plot(pca)
+```
+
+We can also view a summary of how well PCA is doing 
+```{r}
+summary(pca)
+```
+
+Do our PCA plot of this RNA-Seq data with texts
+```{r}
+plot(pca$x[,1], pca$x[,2], xlab="PC1", ylab="PC2")
+text(pca$x[,1], pca$x[,2], colnames(rna.data))
+```
+
+Generate a screen-plot
+```{r}
+pca.var <- pca$sdev^2
+pca.var.per <- round(pca.var/sum(pca.var)*100, 1)
+pca.var.per
+barplot(pca.var.per, main="Scree Plot", names.arg = paste0("PC", 1:10),
+        xlab="Principal Component", ylab="Percent Variation")
+```
+
+Now make the main PCA plot more attractive and useful
+```{r}
+colvec <- colnames(rna.data)
+colvec[grep("wt", colvec)] <- "red"
+colvec[grep("ko", colvec)] <- "blue"
+
+plot(pca$x[,1], pca$x[,2], col=colvec, pch=16,
+     xlab=paste0("PC1 (", pca.var.per[1], "%)"),
+     ylab=paste0("PC2 (", pca.var.per[2], "%)"))
+
+text(pca$x[,1], pca$x[,2], labels = colnames(rna.data), pos=c(rep(4,5), rep(2,5)))
+```
+
+Now use ggplot2 package
+```{r}
+library(ggplot2)
+
+df <- as.data.frame(pca$x)
+
+# Our first basic plot
+ggplot(df) + 
+  aes(PC1, PC2) + 
+  geom_point()
+```
+
+Now add condition specific colors to the ggplot
+```{r}
+df$samples <- colnames(rna.data) 
+df$condition <- substr(colnames(rna.data),1,2)
+
+p <- ggplot(df) + 
+        aes(PC1, PC2, label=samples, col=condition) + 
+        geom_label(show.legend = FALSE)
+p
+```
+
+Finally, polish your ggplot
+```{r}
+p + labs(title="PCA of RNASeq Data",
+       subtitle = "PC1 clealy seperates wild-type from knock-out samples",
+       x=paste0("PC1 (", pca.var.per[1], "%)"),
+       y=paste0("PC2 (", pca.var.per[2], "%)"),
+       caption="Bioinformatics example data") +
+     theme_bw()
+```
+
